@@ -3469,9 +3469,13 @@ var getOptions = function (options) {
     });
 
     return {
+        type: options.type,
         topics: options.topics,
         from: options.from,
+        sig: options.sig,
         to: options.to,
+        key: options.key,
+        minPow: options.minPow,
         address: options.address,
         fromBlock: formatters.inputBlockNumberFormatter(options.fromBlock),
         toBlock: formatters.inputBlockNumberFormatter(options.toBlock)
@@ -3852,20 +3856,14 @@ var outputLogFormatter = function(log) {
 var inputPostFormatter = function(post) {
 
     // post.payload = utils.toHex(post.payload);
-    post.ttl = utils.fromDecimal(post.ttl);
-    post.workToProve = utils.fromDecimal(post.workToProve);
-    post.priority = utils.fromDecimal(post.priority);
+    if (post.ttl) post.ttl = utils.fromDecimal(post.ttl);
+    if (post.powTime) post.powTime = utils.fromDecimal(post.powTime);
+    if (post.powTarget) post.powTarget = post.powTarget.toString();
 
-    // fallback
-    if (!utils.isArray(post.topics)) {
-        post.topics = post.topics ? [post.topics] : [];
+    // format the topic
+    if (post.topic) {
+        post.topic = (post.topic.indexOf('0x') === 0) ? post.topic : utils.fromUtf8(post.topic);
     }
-
-    // format the following options
-    post.topics = post.topics.map(function(topic){
-        // convert only if not hex
-        return (topic.indexOf('0x') === 0) ? topic : utils.fromUtf8(topic);
-    });
 
     return post;
 };
@@ -3891,14 +3889,35 @@ var outputPostFormatter = function(post){
     // }
 
     // format the following options
-    if (!post.topics) {
-        post.topics = [];
-    }
-    post.topics = post.topics.map(function(topic){
-        return utils.toAscii(topic);
-    });
+    // if (!post.topics) {
+    //     post.topics = [];
+    // }
+    // post.topics = post.topics.map(function(topic){
+    //     return utils.toAscii(topic);
+    // });
 
     return post;
+};
+
+/**
+ * Formats the input of a whisper subscribe and converts all values to HEX
+ *
+ * @method inputSubscribeFormatter
+ * @param {Object} filterArgs object
+ * @returns {Object}
+ */
+var inputSubscribeFormatter = function(filterArgs) {
+    if (filterArgs.minPow) filterArgs.powTarget = filterArgs.minPow.toString();
+
+    // format topics
+    if (!utils.isArray(filterArgs.topics)) {
+        filterArgs.topics = filterArgs.topics ? [filterArgs.topics] : [];
+    }
+    filterArgs.topics = filterArgs.topics.map(function(topic){
+        return (topic.indexOf('0x') === 0) ? topic : utils.fromUtf8(topic);
+    });
+
+    return filterArgs;
 };
 
 var inputAddressFormatter = function (address) {
@@ -3934,6 +3953,7 @@ module.exports = {
     inputTransactionFormatter: inputTransactionFormatter,
     inputAddressFormatter: inputAddressFormatter,
     inputPostFormatter: inputPostFormatter,
+    inputSubscribeFormatter: inputSubscribeFormatter,
     outputBigNumberFormatter: outputBigNumberFormatter,
     outputTransactionFormatter: outputTransactionFormatter,
     outputTransactionReceiptFormatter: outputTransactionReceiptFormatter,
@@ -4287,6 +4307,7 @@ HttpProvider.prototype.prepareRequest = function (async) {
  */
 HttpProvider.prototype.send = function (payload) {
     var request = this.prepareRequest(false);
+    // console.log(JSON.stringify(payload));
 
     try {
         request.send(JSON.stringify(payload));
@@ -4314,6 +4335,7 @@ HttpProvider.prototype.send = function (payload) {
  */
 HttpProvider.prototype.sendAsync = function (payload, callback) {
     var request = this.prepareRequest(true);
+    // console.log(JSON.stringify(payload))
 
     request.onreadystatechange = function() {
         if (request.readyState === 4 && request.timeout !== 1) {
@@ -5661,34 +5683,62 @@ var Shh = function (web3) {
 
     var self = this;
 
-    methods().forEach(function(method) { 
+    methods().forEach(function (method) {
         method.attachToObject(self);
         method.setRequestManager(self._requestManager);
     });
 };
 
-Shh.prototype.filter = function (fil, callback) {
-    return new Filter(this._requestManager, fil, watches.shh(), formatters.outputPostFormatter, callback);
+Shh.prototype.filter = function (fil, callback, filterCreationErrorCallback) {
+    return new Filter(this._requestManager, fil, watches.shh(), formatters.outputPostFormatter, callback, filterCreationErrorCallback);
 };
 
-var methods = function () { 
+var methods = function () {
+    var version = new Method({
+        name: 'version',
+        call: 'shh_version'
+    });
+
+    var info = new Method({
+        name: 'info',
+        call: 'shh_info'
+    });
+
+    var setMinimumPoW = new Method({
+        name: 'setMinimumPoW',
+        call: 'shh_setMinimumPoW',
+        params: 1
+    });
 
     var post = new Method({
-        name: 'post', 
-        call: 'shh_post', 
+        name: 'post',
+        call: 'shh_post',
         params: 1,
         inputFormatter: [formatters.inputPostFormatter]
     });
 
-    var newIdentity = new Method({
-        name: 'newIdentity',
-        call: 'shh_newIdentity',
-        params: 0
+    var subscribe = new Method({
+        name: 'subscribe',
+        call: 'shh_subscribe',
+        params: 1,
+        inputFormatter: [formatters.inputSubscribeFormatter]
     });
 
-    var hasIdentity = new Method({
-        name: 'hasIdentity',
-        call: 'shh_hasIdentity',
+    var unsubscribe = new Method({
+        name: 'unsubscribe',
+        call: 'shh_unsubscribe',
+        params: 1
+    });
+
+    var getMessages = new Method({
+        name: 'getMessages',
+        call: 'shh_getMessages',
+        params: 1
+    });
+
+    var getSubscriptionMessages = new Method({
+        name: 'getSubscriptionMessages',
+        call: 'shh_getSubscriptionMessages',
         params: 1
     });
 
@@ -5704,12 +5754,92 @@ var methods = function () {
         params: 0
     });
 
+    var newKeyPair = new Method({
+        name: 'newKeyPair',
+        call: 'shh_newKeyPair'
+    });
+
+    var hasKeyPair = new Method({
+        name: 'hasKeyPair',
+        call: 'shh_hasKeyPair',
+        params: 1
+    });
+
+    var getPublicKey = new Method({
+        name: 'getPublicKey',
+        call: 'shh_getPublicKey',
+        params: 1
+    });
+
+    var getPrivateKey = new Method({
+        name: 'getPrivateKey',
+        call: 'shh_getPrivateKey',
+        params: 1
+    });
+
+    var deleteKeyPair = new Method({
+        name: 'deleteKeyPair',
+        call: 'shh_deleteKeyPair',
+        params: 1
+    });
+
+    var generateSymmetricKey = new Method({
+        name: 'generateSymmetricKey',
+        call: 'shh_generateSymmetricKey'
+    });
+
+    var addSymmetricKeyDirect = new Method({
+        name: 'addSymmetricKeyDirect',
+        call: 'shh_addSymmetricKeyDirect',
+        params: 1
+    });
+
+    var addSymmetricKeyFromPassword = new Method({
+        name: 'addSymmetricKeyFromPassword',
+        call: 'shh_addSymmetricKeyFromPassword',
+        params: 1
+    });
+
+    var hasSymmetricKey = new Method({
+        name: 'hasSymmetricKey',
+        call: 'shh_hasSymmetricKey',
+        params: 1
+    });
+
+    var getSymmetricKey = new Method({
+        name: 'getSymmetricKey',
+        call: 'shh_getSymmetricKey',
+        params: 1
+    });
+
+    var deleteSymmetricKey = new Method({
+        name: 'deleteSymmetricKey',
+        call: 'shh_deleteSymmetricKey',
+        params: 1
+    });
+
     return [
+        version,
+        info,
+        setMinimumPoW,
         post,
-        newIdentity,
-        hasIdentity,
-        newGroup,
-        addToGroup
+        subscribe,
+        unsubscribe,
+        getMessages,
+        getSubscriptionMessages,
+        // asymmetric key management
+        newKeyPair,
+        hasKeyPair,
+        getPublicKey,
+        getPrivateKey,
+        deleteKeyPair,
+        // symmetric key management
+        generateSymmetricKey,
+        addSymmetricKeyDirect,
+        addSymmetricKeyFromPassword,
+        hasSymmetricKey,
+        getSymmetricKey,
+        deleteSymmetricKey
     ];
 };
 

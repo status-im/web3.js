@@ -5730,15 +5730,15 @@ var methods = function () {
         params: 1
     });
 
-    var getMessages = new Method({
-        name: 'getMessages',
-        call: 'shh_getMessages',
+    var getFloatingMessages = new Method({
+        name: 'getFloatingMessages',
+        call: 'shh_getFloatingMessages',
         params: 1
     });
 
-    var getSubscriptionMessages = new Method({
-        name: 'getSubscriptionMessages',
-        call: 'shh_getSubscriptionMessages',
+    var getNewSubscriptionMessages = new Method({
+        name: 'getNewSubscriptionMessages',
+        call: 'shh_getNewSubscriptionMessages',
         params: 1
     });
 
@@ -5825,8 +5825,8 @@ var methods = function () {
         post,
         subscribe,
         unsubscribe,
-        getMessages,
-        getSubscriptionMessages,
+        getFloatingMessages,
+        getNewSubscriptionMessages,
         // asymmetric key management
         newKeyPair,
         hasKeyPair,
@@ -6085,7 +6085,7 @@ var shh = function () {
 
     var getLogs = new Method({
         name: 'getLogs',
-        call: 'shh_getMessages',
+        call: 'shh_getFloatingMessages',
         params: 1
     });
 

@@ -735,68 +735,52 @@ SolidityCoder.prototype.encodeMultiWithOffset = function (types, solidityTypes, 
     return result;
 };
 
-// TODO: refactor whole encoding!
 SolidityCoder.prototype.encodeWithOffset = function (type, solidityType, encoded, offset) {
+    /* jshint maxcomplexity: 17 */
+    /* jshint maxdepth: 5 */
+
     var self = this;
-    if (solidityType.isDynamicArray(type)) {
-        return (function () {
-            // offset was already set
-            var nestedName = solidityType.nestedName(type);
-            var nestedStaticPartLength = solidityType.staticPartLength(nestedName);
-            var result = encoded[0];
+    var encodingMode={dynamic:1,static:2,other:3};
 
-            (function () {
-                var previousLength = 2; // in int
-                if (solidityType.isDynamicArray(nestedName)) {
-                    for (var i = 1; i < encoded.length; i++) {
-                        previousLength += +(encoded[i - 1])[0] || 0;
-                        result += f.formatInputInt(offset + i * nestedStaticPartLength + previousLength * 32).encode();
-                    }
+    var mode=(solidityType.isDynamicArray(type)?encodingMode.dynamic:(solidityType.isStaticArray(type)?encodingMode.static:encodingMode.other));
+
+    if(mode !== encodingMode.other){
+        var nestedName = solidityType.nestedName(type);
+        var nestedStaticPartLength = solidityType.staticPartLength(nestedName);
+        var result = (mode === encodingMode.dynamic ? encoded[0] : '');
+
+        if (solidityType.isDynamicArray(nestedName)) {
+            var previousLength = (mode === encodingMode.dynamic ? 2 : 0);
+
+            for (var i = 0; i < encoded.length; i++) {
+                // calculate length of previous item
+                if(mode === encodingMode.dynamic){
+                    previousLength += +(encoded[i - 1])[0] || 0;
                 }
-            })();
-
-            // first element is length, skip it
-            (function () {
-                for (var i = 0; i < encoded.length - 1; i++) {
-                    var additionalOffset = result / 2;
-                    result += self.encodeWithOffset(nestedName, solidityType, encoded[i + 1], offset +  additionalOffset);
+                else if(mode === encodingMode.static){
+                    previousLength += +(encoded[i - 1] || [])[0] || 0;
                 }
-            })();
-
-            return result;
-        })();
-
-    } else if (solidityType.isStaticArray(type)) {
-        return (function () {
-            var nestedName = solidityType.nestedName(type);
-            var nestedStaticPartLength = solidityType.staticPartLength(nestedName);
-            var result = "";
-
-
-            if (solidityType.isDynamicArray(nestedName)) {
-                (function () {
-                    var previousLength = 0; // in int
-                    for (var i = 0; i < encoded.length; i++) {
-                        // calculate length of previous item
-                        previousLength += +(encoded[i - 1] || [])[0] || 0;
-                        result += f.formatInputInt(offset + i * nestedStaticPartLength + previousLength * 32).encode();
-                    }
-                })();
+                result += f.formatInputInt(offset + i * nestedStaticPartLength + previousLength * 32).encode();
             }
+        }
 
-            (function () {
-                for (var i = 0; i < encoded.length; i++) {
-                    var additionalOffset = result / 2;
-                    result += self.encodeWithOffset(nestedName, solidityType, encoded[i], offset + additionalOffset);
-                }
-            })();
+        var len= (mode === encodingMode.dynamic ? encoded.length-1 : encoded.length);
+        for (var c = 0; c < len; c++) {
+            var additionalOffset = result / 2;
+            if(mode === encodingMode.dynamic){
+                result += self.encodeWithOffset(nestedName, solidityType, encoded[c + 1], offset +  additionalOffset);
+            }
+            else if(mode === encodingMode.static){
+                result += self.encodeWithOffset(nestedName, solidityType, encoded[c], offset + additionalOffset);
+            }
+        }
 
-            return result;
-        })();
+        return result;
     }
 
     return encoded;
 };
+
 
 /**
  * Should be used to decode bytes to plain param
@@ -3655,8 +3639,6 @@ module.exports = Filter;
 
 
 },{"../utils/utils":20,"./formatters":30}],30:[function(require,module,exports){
-'use strict'
-
 /*
     This file is part of web3.js.
 
@@ -3679,6 +3661,9 @@ module.exports = Filter;
  * @author Fabian Vogelsteller <fabian@ethdev.com>
  * @date 2015
  */
+
+'use strict';
+
 
 var utils = require('../utils/utils');
 var config = require('../utils/config');
@@ -13607,13 +13592,13 @@ module.exports = transfer;
 module.exports = XMLHttpRequest;
 
 },{}],"bignumber.js":[function(require,module,exports){
-/*! bignumber.js v4.0.0 https://github.com/MikeMcl/bignumber.js/LICENCE */
+/*! bignumber.js v4.0.2 https://github.com/MikeMcl/bignumber.js/LICENCE */
 
 ;(function (globalObj) {
     'use strict';
 
     /*
-      bignumber.js v4.0.0
+      bignumber.js v4.0.2
       A JavaScript library for arbitrary-precision arithmetic.
       https://github.com/MikeMcl/bignumber.js
       Copyright (c) 2017 Michael Mclaughlin <M8ch88l@gmail.com>
@@ -14244,7 +14229,7 @@ module.exports = XMLHttpRequest;
                 } else {
 
                     // Remove leading elements which are zero and adjust exponent accordingly.
-                    for ( e = -1 ; c[0] === 0; c.shift(), e -= LOG_BASE);
+                    for ( e = -1 ; c[0] === 0; c.splice(0, 1), e -= LOG_BASE);
 
                     // Count the digits of the first element of c to determine leading zeros, and...
                     for ( i = 1, v = c[0]; v >= 10; v /= 10, i++);
@@ -14337,7 +14322,7 @@ module.exports = XMLHttpRequest;
 
                         if ( !d ) {
                             ++e;
-                            xc.unshift(1);
+                            xc = [1].concat(xc);
                         }
                     }
                 }
@@ -14375,7 +14360,7 @@ module.exports = XMLHttpRequest;
                     x[i] = temp % base;
                 }
 
-                if (carry) x.unshift(carry);
+                if (carry) x = [carry].concat(x);
 
                 return x;
             }
@@ -14409,7 +14394,7 @@ module.exports = XMLHttpRequest;
                 }
 
                 // Remove leading zeros.
-                for ( ; !a[0] && a.length > 1; a.shift() );
+                for ( ; !a[0] && a.length > 1; a.splice(0, 1) );
             }
 
             // x: dividend, y: divisor.
@@ -14478,7 +14463,7 @@ module.exports = XMLHttpRequest;
                     // Add zeros to make remainder as long as divisor.
                     for ( ; remL < yL; rem[remL++] = 0 );
                     yz = yc.slice();
-                    yz.unshift(0);
+                    yz = [0].concat(yz);
                     yc0 = yc[0];
                     if ( yc[1] >= base / 2 ) yc0++;
                     // Not necessary, but to prevent trial digit n > base, when using base 3.
@@ -14549,7 +14534,7 @@ module.exports = XMLHttpRequest;
                                 prodL = prod.length;
                             }
 
-                            if ( prodL < remL ) prod.unshift(0);
+                            if ( prodL < remL ) prod = [0].concat(prod);
 
                             // Subtract product from remainder.
                             subtract( rem, prod, remL, base );
@@ -14590,7 +14575,7 @@ module.exports = XMLHttpRequest;
                     more = rem[0] != null;
 
                     // Leading zero?
-                    if ( !qc[0] ) qc.shift();
+                    if ( !qc[0] ) qc.splice(0, 1);
                 }
 
                 if ( base == BASE ) {
@@ -14750,15 +14735,17 @@ module.exports = XMLHttpRequest;
 
         // Handle values that fail the validity test in BigNumber.
         parseNumeric = (function () {
-            var basePrefix = /^(-?)0([xbo])(?=\w[\w.]*$)/i,
+            var basePrefix = /^((-?)0([xbo]))(\w[\w.]*)$/i,
                 dotAfter = /^([^.]+)\.$/,
                 dotBefore = /^\.([^.]+)$/,
                 isInfinityOrNaN = /^-?(Infinity|NaN)$/,
-                whitespaceOrPlus = /^\s*\+(?=[\w.])|^\s+|\s+$/g;
+                whitespaceOrPlus = /^\s*\+([\w.])|^\s+|\s+$/g;
 
             return function ( x, str, num, b ) {
                 var base,
-                    s = num ? str : str.replace( whitespaceOrPlus, '' );
+                    s = num ? str : str.replace(whitespaceOrPlus, function (m, p1) {
+                        return m.indexOf('+') > -1 && p1 !== '' ? p1 : '';
+                    });
 
                 // No exception on ±Infinity or NaN.
                 if ( isInfinityOrNaN.test(s) ) {
@@ -14766,10 +14753,10 @@ module.exports = XMLHttpRequest;
                 } else {
                     if ( !num ) {
 
-                        // basePrefix = /^(-?)0([xbo])(?=\w[\w.]*$)/i
-                        s = s.replace( basePrefix, function ( m, p1, p2 ) {
+                        // basePrefix = /^((-?)0([xbo]))(\w[\w.]*)$/i
+                        s = s.replace( basePrefix, function ( s, m, p1, p2, p3 ) {
                             base = ( p2 = p2.toLowerCase() ) == 'x' ? 16 : p2 == 'b' ? 2 : 8;
-                            return !b || b == base ? p1 : m;
+                            return (!b || b == base ? p1 : m) + p3;
                         });
 
                         if (b) {
@@ -15300,7 +15287,7 @@ module.exports = XMLHttpRequest;
             }
 
             // Remove leading zeros and adjust exponent accordingly.
-            for ( ; xc[0] == 0; xc.shift(), --ye );
+            for ( ; xc[0] == 0; xc.splice(0, 1), --ye );
 
             // Zero?
             if ( !xc[0] ) {
@@ -15468,7 +15455,7 @@ module.exports = XMLHttpRequest;
             }
 
             if (a) {
-                xc.unshift(a);
+                xc = [a].concat(xc);
                 ++ye;
             }
 
@@ -15757,7 +15744,7 @@ module.exports = XMLHttpRequest;
             if (c) {
                 ++e;
             } else {
-                zc.shift();
+                zc.splice(0, 1);
             }
 
             return normalise( y, zc, e );
@@ -16324,7 +16311,7 @@ module.exports = XMLHttpRequest;
 
 
     BigNumber = constructorFactory();
-    BigNumber.default = BigNumber.BigNumber = BigNumber;
+    BigNumber['default'] = BigNumber.BigNumber = BigNumber;
 
 
     // AMD.

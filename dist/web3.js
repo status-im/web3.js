@@ -13592,13 +13592,13 @@ module.exports = transfer;
 module.exports = XMLHttpRequest;
 
 },{}],"bignumber.js":[function(require,module,exports){
-/*! bignumber.js v4.0.0 https://github.com/MikeMcl/bignumber.js/LICENCE */
+/*! bignumber.js v4.0.2 https://github.com/MikeMcl/bignumber.js/LICENCE */
 
 ;(function (globalObj) {
     'use strict';
 
     /*
-      bignumber.js v4.0.0
+      bignumber.js v4.0.2
       A JavaScript library for arbitrary-precision arithmetic.
       https://github.com/MikeMcl/bignumber.js
       Copyright (c) 2017 Michael Mclaughlin <M8ch88l@gmail.com>
@@ -14229,7 +14229,7 @@ module.exports = XMLHttpRequest;
                 } else {
 
                     // Remove leading elements which are zero and adjust exponent accordingly.
-                    for ( e = -1 ; c[0] === 0; c.shift(), e -= LOG_BASE);
+                    for ( e = -1 ; c[0] === 0; c.splice(0, 1), e -= LOG_BASE);
 
                     // Count the digits of the first element of c to determine leading zeros, and...
                     for ( i = 1, v = c[0]; v >= 10; v /= 10, i++);
@@ -14322,7 +14322,7 @@ module.exports = XMLHttpRequest;
 
                         if ( !d ) {
                             ++e;
-                            xc.unshift(1);
+                            xc = [1].concat(xc);
                         }
                     }
                 }
@@ -14360,7 +14360,7 @@ module.exports = XMLHttpRequest;
                     x[i] = temp % base;
                 }
 
-                if (carry) x.unshift(carry);
+                if (carry) x = [carry].concat(x);
 
                 return x;
             }
@@ -14394,7 +14394,7 @@ module.exports = XMLHttpRequest;
                 }
 
                 // Remove leading zeros.
-                for ( ; !a[0] && a.length > 1; a.shift() );
+                for ( ; !a[0] && a.length > 1; a.splice(0, 1) );
             }
 
             // x: dividend, y: divisor.
@@ -14463,7 +14463,7 @@ module.exports = XMLHttpRequest;
                     // Add zeros to make remainder as long as divisor.
                     for ( ; remL < yL; rem[remL++] = 0 );
                     yz = yc.slice();
-                    yz.unshift(0);
+                    yz = [0].concat(yz);
                     yc0 = yc[0];
                     if ( yc[1] >= base / 2 ) yc0++;
                     // Not necessary, but to prevent trial digit n > base, when using base 3.
@@ -14534,7 +14534,7 @@ module.exports = XMLHttpRequest;
                                 prodL = prod.length;
                             }
 
-                            if ( prodL < remL ) prod.unshift(0);
+                            if ( prodL < remL ) prod = [0].concat(prod);
 
                             // Subtract product from remainder.
                             subtract( rem, prod, remL, base );
@@ -14575,7 +14575,7 @@ module.exports = XMLHttpRequest;
                     more = rem[0] != null;
 
                     // Leading zero?
-                    if ( !qc[0] ) qc.shift();
+                    if ( !qc[0] ) qc.splice(0, 1);
                 }
 
                 if ( base == BASE ) {
@@ -14735,15 +14735,17 @@ module.exports = XMLHttpRequest;
 
         // Handle values that fail the validity test in BigNumber.
         parseNumeric = (function () {
-            var basePrefix = /^(-?)0([xbo])(?=\w[\w.]*$)/i,
+            var basePrefix = /^((-?)0([xbo]))(\w[\w.]*)$/i,
                 dotAfter = /^([^.]+)\.$/,
                 dotBefore = /^\.([^.]+)$/,
                 isInfinityOrNaN = /^-?(Infinity|NaN)$/,
-                whitespaceOrPlus = /^\s*\+(?=[\w.])|^\s+|\s+$/g;
+                whitespaceOrPlus = /^\s*\+([\w.])|^\s+|\s+$/g;
 
             return function ( x, str, num, b ) {
                 var base,
-                    s = num ? str : str.replace( whitespaceOrPlus, '' );
+                    s = num ? str : str.replace(whitespaceOrPlus, function (m, p1) {
+                        return m.indexOf('+') > -1 && p1 !== '' ? p1 : '';
+                    });
 
                 // No exception on ±Infinity or NaN.
                 if ( isInfinityOrNaN.test(s) ) {
@@ -14751,10 +14753,10 @@ module.exports = XMLHttpRequest;
                 } else {
                     if ( !num ) {
 
-                        // basePrefix = /^(-?)0([xbo])(?=\w[\w.]*$)/i
-                        s = s.replace( basePrefix, function ( m, p1, p2 ) {
+                        // basePrefix = /^((-?)0([xbo]))(\w[\w.]*)$/i
+                        s = s.replace( basePrefix, function ( s, m, p1, p2, p3 ) {
                             base = ( p2 = p2.toLowerCase() ) == 'x' ? 16 : p2 == 'b' ? 2 : 8;
-                            return !b || b == base ? p1 : m;
+                            return (!b || b == base ? p1 : m) + p3;
                         });
 
                         if (b) {
@@ -15285,7 +15287,7 @@ module.exports = XMLHttpRequest;
             }
 
             // Remove leading zeros and adjust exponent accordingly.
-            for ( ; xc[0] == 0; xc.shift(), --ye );
+            for ( ; xc[0] == 0; xc.splice(0, 1), --ye );
 
             // Zero?
             if ( !xc[0] ) {
@@ -15453,7 +15455,7 @@ module.exports = XMLHttpRequest;
             }
 
             if (a) {
-                xc.unshift(a);
+                xc = [a].concat(xc);
                 ++ye;
             }
 
@@ -15742,7 +15744,7 @@ module.exports = XMLHttpRequest;
             if (c) {
                 ++e;
             } else {
-                zc.shift();
+                zc.splice(0, 1);
             }
 
             return normalise( y, zc, e );
@@ -16309,7 +16311,7 @@ module.exports = XMLHttpRequest;
 
 
     BigNumber = constructorFactory();
-    BigNumber.default = BigNumber.BigNumber = BigNumber;
+    BigNumber['default'] = BigNumber.BigNumber = BigNumber;
 
 
     // AMD.

@@ -6076,7 +6076,7 @@ var shh = function () {
         }),
         new Method({
             name: 'getLogs',
-            call: 'shh_getFilterMessages',
+            call: 'shhext_getNewFilterMessages',
             params: 1
         }),
         new Method({

@@ -6081,7 +6081,7 @@ var shh = function () {
         }),
         new Method({
             name: 'poll',
-            call: 'shh_getFilterMessages',
+            call: 'shhext_getNewFilterMessages',
             params: 1
         })
     ];

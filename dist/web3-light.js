@@ -5830,6 +5830,11 @@ var methods = function () {
             name: 'requestMessages',
             call: 'shhext_requestMessages',
             params: 1
+        }),
+        new Method({
+            name: 'confirmMessagesProcessed',
+            call: 'shhext_confirmMessagesProcessed',
+            params: 1
         })
     ];
 };

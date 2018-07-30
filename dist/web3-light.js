@@ -5843,8 +5843,8 @@ var methods = function () {
             inputFormatter: [null]
         }),
         new Method({
-            name: 'sendTopicMessage',
-            call: 'shhext_sendTopicMessage',
+            name: 'sendPublicMessage',
+            call: 'shhext_sendPublicMessage',
             params: 1,
             inputFormatter: [null]
         })

@@ -5847,6 +5847,12 @@ var methods = function () {
             call: 'shhext_sendPublicMessage',
             params: 1,
             inputFormatter: [null]
+        }),
+        new Method({
+            name: 'sendGroupMessage',
+            call: 'shhext_sendGroupMessage',
+            params: 1,
+            inputFormatter: [null]
         })
     ];
 };

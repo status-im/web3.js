@@ -4293,7 +4293,7 @@ var HttpProvider = function (host, timeout, user, password) {
  */
 HttpProvider.prototype.prepareRequest = function (async) {
   var request;
-
+    console.log("TIMEOUT", this.timeout)
   if (async) {
     request = new XHR2();
     request.timeout = this.timeout;

@@ -5630,9 +5630,9 @@ var methods = function () {
 		inputFormatter: [null, formatters.inputAddressFormatter, null]
     });
 
-    var keycardSignPinless = new Method({
-        name: 'keycardSignPinless',
-		call: 'personal_keycardSignPinless',
+    var signMessagePinless = new Method({
+        name: 'signMessagePinless',
+		call: 'personal_signMessagePinless',
 		params: 3,
 		inputFormatter: [null, formatters.inputAddressFormatter, null]
     });
@@ -5670,7 +5670,7 @@ var methods = function () {
         unlockAccount,
         ecRecover,
         sign,
-        keycardSignPinless,
+        signMessagePinless,
         sendTransaction,
         lockAccount
     ];

@@ -5912,7 +5912,7 @@ RawFilter.prototype.get = function (callback) {
     return this;
 };
 
-module.exports = Filter;
+module.exports = RawFilter;
 
 
 },{"../../utils/utils":20,"../formatters":30}],42:[function(require,module,exports){

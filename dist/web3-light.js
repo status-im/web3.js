@@ -5873,12 +5873,7 @@ RawFilter.prototype.watch = function (callback) {
 RawFilter.prototype.stopWatching = function (callback) {
     this.requestManager.stopPolling(this.filterId);
     this.callbacks = [];
-    // remove filter async
-    if (callback) {
-        this.implementation.uninstallFilter(this.filterId, callback);
-    } else {
-        return this.implementation.uninstallFilter(this.filterId);
-    }
+    callback()
 };
 
 RawFilter.prototype.get = function (callback) {
@@ -5912,7 +5907,7 @@ RawFilter.prototype.get = function (callback) {
     return this;
 };
 
-module.exports = Filter;
+module.exports = RawFilter;
 
 
 },{"../../utils/utils":20,"../formatters":30}],42:[function(require,module,exports){
